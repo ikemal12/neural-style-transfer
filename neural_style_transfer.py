@@ -14,20 +14,36 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 imsize = 512 if torch.cuda.is_available() else 128  # size of output image
 print(imsize)
 
-loader = transforms.Compose([transforms.Resize(imsize), transforms.ToTensor()])
+loader = transforms.Compose([transforms.Resize((imsize, imsize)), transforms.ToTensor()])
 
 def img_loader(img_name):
     img = Image.open(img_name)
-    img = loader(img).unsqueeze(0)
-    return img.to(device, torch.float)
+    img_tensor: torch.Tensor = loader(img)  # type: ignore
+    img_tensor = img_tensor.unsqueeze(0)
+    return img_tensor.to(device, torch.float)
 
-img_dir = "images/"
-content_img = img_loader(img_dir + "tajmahal.jpg")
-style_img = img_loader(img_dir + "tree.jpg")
 
-assert content_img.size() == style_img.size(), "we need to import style and content images of the same size"
+# img_dir = "images/"
+# content_img = img_loader(img_dir + "tajmahal.jpg")
+# style_img = img_loader(img_dir + "tree.jpg")
+# assert content_img.size() == style_img.size(), "we need to import style and content images of the same size"
+
 unloader = transforms.ToPILImage() # reconvert from tensor to PIL image
-plt.ion()
+
+def imshow(tensor, title=None):
+    img = tensor.cpu().clone()
+    img = img.squeeze(0)
+    img = unloader(img)
+    plt.imshow(img)
+    if title is not None:
+        plt.title(title)
+    plt.pause(0.001)
+
+
+# plt.figure()
+# imshow(style_img, title="Style Image")
+# plt.figure()
+# imshow(content_img, title="Content Image")
 
 
 class ContentLoss(nn.Module):
@@ -126,21 +142,21 @@ def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
             style_losses.append(style_loss)
 
 
-        # trim off layers after last content and style losses
-        for i in range(len(model) - 1, -1, -1):
-            if isinstance(model[i], ContentLoss) or isinstance(model[i], StyleLoss):
-                break
+    # trim off layers after last content and style losses
+    for i in range(len(model) - 1, -1, -1):
+        if isinstance(model[i], ContentLoss) or isinstance(model[i], StyleLoss):
+            break
 
-
-        model = model[:(i + 1)]
-        return model, style_losses, content_losses
+    model = model[:(i + 1)]
+    return model, style_losses, content_losses
     
 
 
-#input_img = content_img.clone()
-
-# start with white noise image 
-input_img = torch.randn(content_img.data.size(), device=device)
+# input_img = content_img.clone()
+# # start with white noise image 
+# input_img = torch.randn(content_img.data.size(), device=device)
+# plt.figure()
+# imshow(input_img, title="Input Image")
 
 
 def get_input_optimizer(input_img):
@@ -148,7 +164,7 @@ def get_input_optimizer(input_img):
     return optimizer
 
 
-def run_style_transfer(cnn, normalization_mean, normalization_std,,
+def run_style_transfer(cnn, normalization_mean, normalization_std,
                        content_img, style_img, input_img, num_steps=300,
                        style_weight=1000000, content_weight=1):
     model, style_losses, content_losses = get_style_model_and_losses(cnn,
@@ -165,14 +181,14 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,,
             optimizer.zero_grad()
             model(input_img)
 
-            style_score = 0
-            content_score = 0
+            style_score = torch.tensor(0.0, device=device, requires_grad=True)
+            content_score = torch.tensor(0.0, device=device, requires_grad=True)
 
             for style_layer in style_losses:
-                style_score += (1/5) * style_layer.loss
+                style_score = style_score + (1/5) * style_layer.loss
 
             for content_layer in content_losses:
-                content_score += content_layer.loss
+                content_score = content_score + content_layer.loss
 
             style_score *= style_weight
             content_score *= content_weight
@@ -195,6 +211,9 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,,
     return input_img
 
 
-output = run_style_transfer(cnn, cnn_normalization_mean, cnn_normalization_std,
-                            content_img, style_img, input_img, num_steps=3000)
+
+# output = run_style_transfer(cnn, cnn_normalization_mean, cnn_normalization_std,
+#                             content_img, style_img, input_img, num_steps=3000)
+# plt.figure()
+# imshow(output, title='Output Image')
 
