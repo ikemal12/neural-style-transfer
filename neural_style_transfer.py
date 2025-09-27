@@ -6,16 +6,16 @@ import torch.optim as optim
 from PIL import Image
 import torchvision.transforms as transforms
 import torchvision.models as models
+from torchvision.models import VGG19_Weights
 import matplotlib.pyplot as plt
 import copy
-import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 imsize = 512 if torch.cuda.is_available() else 128  # size of output image
-print(imsize)
 
 loader = transforms.Compose([transforms.Resize((imsize, imsize)), transforms.ToTensor()])
 
+# Load and preprocess image for neural network input
 def img_loader(img_name):
     img = Image.open(img_name)
     img_tensor: torch.Tensor = loader(img)  # type: ignore
@@ -23,13 +23,9 @@ def img_loader(img_name):
     return img_tensor.to(device, torch.float)
 
 
-# img_dir = "images/"
-# content_img = img_loader(img_dir + "tajmahal.jpg")
-# style_img = img_loader(img_dir + "tree.jpg")
-# assert content_img.size() == style_img.size(), "we need to import style and content images of the same size"
+unloader = transforms.ToPILImage()  # reconvert from tensor to PIL image
 
-unloader = transforms.ToPILImage() # reconvert from tensor to PIL image
-
+# Display tensor as image using matplotlib
 def imshow(tensor, title=None):
     img = tensor.cpu().clone()
     img = img.squeeze(0)
@@ -40,12 +36,7 @@ def imshow(tensor, title=None):
     plt.pause(0.001)
 
 
-# plt.figure()
-# imshow(style_img, title="Style Image")
-# plt.figure()
-# imshow(content_img, title="Content Image")
-
-
+# Loss module to measure content similarity using MSE
 class ContentLoss(nn.Module):
     def __init__(self, target):
         super(ContentLoss, self).__init__()
@@ -56,7 +47,7 @@ class ContentLoss(nn.Module):
         return input
     
 
-# for style loss
+# Compute Gram matrix for style representation
 def gram_matrix(input):
     a, b, c, d = input.size() # a=batch size(=1), b=number of feature maps, (c,d)=dimensions of a f. map (N=c*d)
 
@@ -66,6 +57,7 @@ def gram_matrix(input):
     return G.div(a*b*c*d) # normalize values of gram matrix by dividing by number of element in each feature maps
     
 
+# Loss module to measure style similarity using Gram matrices
 class StyleLoss(nn.Module):
     def __init__(self, target_feature):
         super(StyleLoss, self).__init__()
@@ -77,19 +69,19 @@ class StyleLoss(nn.Module):
         return input
     
     
-# helps to normalize input image so that it can be easily fit into VGG
+# Normalize input images for VGG19 preprocessing
 class Normalization(nn.Module):
     def __init__(self, mean, std):
         super(Normalization, self).__init__()
-        self.mean = torch.tensor(mean).view(-1, 1, 1)
-        self.std = torch.tensor(std).view(-1, 1, 1)
+        self.mean = mean.clone().detach().view(-1, 1, 1)
+        self.std = std.clone().detach().view(-1, 1, 1)
 
     def forward(self, img):
         return (img - self.mean) / self.std
 
     
-# Importing VGG 19 model like in the paper
-cnn = models.vgg19(pretrained=True).features.to(device).eval()
+# Load VGG19 model with pre-trained weights
+cnn = models.vgg19(weights=VGG19_Weights.IMAGENET1K_V1).features.to(device).eval()
 
 cnn_normalization_mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
 cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(device)
@@ -98,7 +90,7 @@ content_layers_default = ['conv_4']
 style_layers_default = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
 
 
-# creates the CNN model with content and style loss layers
+# Build CNN model with embedded content and style loss modules
 def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
                                style_img, content_img,
                                content_layers=content_layers_default,
@@ -151,19 +143,13 @@ def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
     return model, style_losses, content_losses
     
 
-
-# input_img = content_img.clone()
-# # start with white noise image 
-# input_img = torch.randn(content_img.data.size(), device=device)
-# plt.figure()
-# imshow(input_img, title="Input Image")
-
-
+# Set up LBFGS optimizer for input image
 def get_input_optimizer(input_img):
     optimizer = optim.LBFGS([input_img.requires_grad_()])
     return optimizer
 
 
+# Main function 
 def run_style_transfer(cnn, normalization_mean, normalization_std,
                        content_img, style_img, input_img, num_steps=300,
                        style_weight=1000000, content_weight=1):
@@ -203,17 +189,10 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,
                     style_score.item(), content_score.item()))
                 print()
 
-            return style_score + content_score
+            return (style_score + content_score).detach()
         
         optimizer.step(closure)
 
     input_img.data.clamp_(0, 1)
     return input_img
-
-
-
-# output = run_style_transfer(cnn, cnn_normalization_mean, cnn_normalization_std,
-#                             content_img, style_img, input_img, num_steps=3000)
-# plt.figure()
-# imshow(output, title='Output Image')
 
