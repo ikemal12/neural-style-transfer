@@ -10,23 +10,19 @@ from torchvision.models import VGG19_Weights
 import matplotlib.pyplot as plt
 import copy
 
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-imsize = 512 if torch.cuda.is_available() else 128  # size of output image
 
-loader = transforms.Compose([transforms.Resize((imsize, imsize)), transforms.ToTensor()])
-
-# Load and preprocess image for neural network input
-def img_loader(img_name):
+def img_loader(img_name, imsize):
+    loader = transforms.Compose([transforms.Resize((imsize, imsize)), transforms.ToTensor()])
     img = Image.open(img_name)
     img_tensor: torch.Tensor = loader(img)  # type: ignore
     img_tensor = img_tensor.unsqueeze(0)
     return img_tensor.to(device, torch.float)
 
 
-unloader = transforms.ToPILImage()  # reconvert from tensor to PIL image
-
-# Display tensor as image using matplotlib
 def imshow(tensor, title=None):
+    unloader = transforms.ToPILImage()  
     img = tensor.cpu().clone()
     img = img.squeeze(0)
     img = unloader(img)
@@ -36,7 +32,15 @@ def imshow(tensor, title=None):
     plt.pause(0.001)
 
 
-# Loss module to measure content similarity using MSE
+def gram_matrix(input):
+    a, b, c, d = input.size() # a=batch size(=1), b=number of feature maps, (c,d)=dimensions of a f. map (N=c*d)
+
+    features = input.view(a * b, c * d)
+    G = torch.mm(features, features.t()) # compute the gram product
+
+    return G.div(a*b*c*d) # normalize values of gram matrix by dividing by number of element in each feature maps
+
+
 class ContentLoss(nn.Module):
     def __init__(self, target):
         super(ContentLoss, self).__init__()
@@ -47,17 +51,6 @@ class ContentLoss(nn.Module):
         return input
     
 
-# Compute Gram matrix for style representation
-def gram_matrix(input):
-    a, b, c, d = input.size() # a=batch size(=1), b=number of feature maps, (c,d)=dimensions of a f. map (N=c*d)
-
-    features = input.view(a * b, c * d)
-    G = torch.mm(features, features.t()) # compute the gram product
-
-    return G.div(a*b*c*d) # normalize values of gram matrix by dividing by number of element in each feature maps
-    
-
-# Loss module to measure style similarity using Gram matrices
 class StyleLoss(nn.Module):
     def __init__(self, target_feature):
         super(StyleLoss, self).__init__()
@@ -69,7 +62,6 @@ class StyleLoss(nn.Module):
         return input
     
     
-# Normalize input images for VGG19 preprocessing
 class Normalization(nn.Module):
     def __init__(self, mean, std):
         super(Normalization, self).__init__()
@@ -80,6 +72,7 @@ class Normalization(nn.Module):
         return (img - self.mean) / self.std
 
     
+
 # Load VGG19 model with pre-trained weights
 cnn = models.vgg19(weights=VGG19_Weights.IMAGENET1K_V1).features.to(device).eval()
 
@@ -90,7 +83,6 @@ content_layers_default = ['conv_4']
 style_layers_default = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
 
 
-# Build CNN model with embedded content and style loss modules
 def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
                                style_img, content_img,
                                content_layers=content_layers_default,
@@ -143,13 +135,12 @@ def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
     return model, style_losses, content_losses
     
 
-# Set up LBFGS optimizer for input image
+
 def get_input_optimizer(input_img):
     optimizer = optim.LBFGS([input_img.requires_grad_()])
     return optimizer
 
 
-# Main function 
 def run_style_transfer(cnn, normalization_mean, normalization_std,
                        content_img, style_img, input_img, num_steps=300,
                        style_weight=1000000, content_weight=1):
