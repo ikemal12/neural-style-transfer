@@ -19,7 +19,7 @@ def load_model(model_path):
 def stylize_image(content_path, model_path, output_path):
     content_transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Lambda(lambda x: x.mul(255)) # PyTorch models expect [0, 255]
+        transforms.Lambda(lambda x: x.mul(255)) 
     ])
     content_image = Image.open(content_path)
     content_tensor: torch.Tensor = content_transform(content_image)  # type: ignore
@@ -29,7 +29,6 @@ def stylize_image(content_path, model_path, output_path):
     with torch.no_grad():
         output_tensor = model(content_tensor)
     end_time = time.time()
-    
     output_tensor = output_tensor.squeeze(0).clamp(0, 255).div(255)
     save_image(output_tensor, output_path)
     elapsed = end_time - start_time

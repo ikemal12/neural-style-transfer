@@ -30,13 +30,13 @@ def imshow(tensor, title=None):
 def gram_matrix(input):
     a, b, c, d = input.size() # a=batch size(=1), b=number of feature maps, (c,d)=dimensions of a f. map (N=c*d)
     features = input.view(a * b, c * d)
-    G = torch.mm(features, features.t()) # compute the gram product
-    return G.div(a*b*c*d) # normalize values of gram matrix by dividing by number of element in each feature maps
+    G = torch.mm(features, features.t()) # compute gram product
+    return G.div(a*b*c*d) # normalize 
 
 class ContentLoss(nn.Module):
     def __init__(self, target):
         super(ContentLoss, self).__init__()
-        self.target = target.detach() # we don't want to backprop through this
+        self.target = target.detach() # don't want to backprop through this
 
     def forward(self, input):
         self.loss = F.mse_loss(input, self.target)

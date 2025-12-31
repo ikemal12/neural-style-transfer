@@ -27,7 +27,7 @@ def stylize_frame(frame, model):
     ])
     img_tensor: torch.Tensor = transform(img)  # type: ignore
     img_tensor = img_tensor.unsqueeze(0).to(device)
-    
+
     with torch.no_grad():
         output = model(img_tensor)
     
@@ -55,7 +55,6 @@ def process_video(video_path, model_path, output_path):
         ret, frame = cap.read()
         if not ret:
             break
-        
         stylized_frame = stylize_frame(frame, model)
         out.write(stylized_frame)
         frame_count += 1

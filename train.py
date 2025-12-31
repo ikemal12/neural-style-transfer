@@ -35,7 +35,6 @@ def main(args):
         os.makedirs(output_dir, exist_ok=True)
         print(f"Output will be saved to: {output_path}\n")
     else:
-        # Use timestamped directory
         output_dir = create_output_directory(args.output_dir, args.content, args.style)
         output_path = os.path.join(output_dir, 'result.jpg')
         print(f"Output directory created at: {output_dir}\n")
