@@ -70,7 +70,7 @@ and Super-Resolution](https://arxiv.org/pdf/1603.08155) by Johnson et al., achie
 
 # How To Use
 
-### Clone The Repository And Set Up The Environment
+### Set Up Environment
 
 ```bash
 git clone git@github.com:ikemal12/Neural-Style-Transfer.git
@@ -137,11 +137,11 @@ For example:
 python video_style_transfer.py --input videos/tiger.mp4 --model models/rain_princess.pth --output results/tiger_rain_princess.mp4
 ```
 
-You can use any pretrained model in the `models/` directory, or train and use your own model which is covered below. 
+You can use any pretrained model in the `models/` directory. 
 
-### Train Your Own Model
+### More Options
 
-To train your own style transfer model, use the train.py script. Example usage:
+You can also use the `train.py` script to run the style transfer, which provides more flexibility:
 
 ```bash
 python train.py --content PATH_TO_CONTENT_IMAGE --style PATH_TO_STYLE_IMAGE --output_dir results/
