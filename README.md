@@ -65,3 +65,111 @@ and Super-Resolution](https://arxiv.org/pdf/1603.08155) by Johnson et al., achie
     <img src="gifs/tiger.gif" width="300" title="Tiger">
     <img src="gifs/tiger_rain_princess.gif" width="300" title="Rain princess tiger">
 </p>
+
+---
+
+# How To Use
+
+### Clone The Repository And Set Up The Environment
+
+```bash
+git clone git@github.com:ikemal12/Neural-Style-Transfer.git
+cd Neural-Style-Transfer
+```
+
+It is recommended to use a virtual environment:
+
+```bash
+python -m venv .venv
+source .venv/Scripts/activate  # On Windows
+# or
+source .venv/bin/activate      # On macOS/Linux
+```
+
+Install the required packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Prepare Images
+
+Place your content images in `images/content/` and style images in `images/style/`, or use the ones already present.
+
+### Style Your Own Image
+
+To style your own image, you can run:
+
+```bash
+python neural_style_transfer.py --content PATH_TO_CONTENT_IMAGE --style PATH_TO_STYLE_IMAGE --output PATH_TO_OUTPUT_IMAGE
+```
+
+You can choose not to specify an output path in which case the output image will automatically be saved in a timestamped folder in `results/`.
+For example, to generate the taj mahal with the style of starry night, you can run:
+
+```bash
+python neural_style_transfer.py --content images/content/tajmahal.jg --style images/style/starrynight.jpg 
+```
+
+If you want a much faster result (albeit slightly lower quality), you can run with a pretrained model:
+
+```bash
+python inference.py --content PATH_TO_CONTENT_IMAGE --model PATH_TO_MODEL --output results/your_result.jpg
+```
+
+Note the output path must start with the `results/` folder. For example:
+
+```bash
+python inference.py --content images/content/man.jpg --model models/candy.pth --output results/candy_man.jpg
+```
+
+### Style Your Own Video
+
+To style your own video, you can run:
+
+```bash
+python video_style_transfer.py --input PATH_TO_INPUT_VIDEO --model PATH_TO_MODEL --output PATH_TO_OUTPUT_VIDEO
+```
+
+For example:
+
+```bash
+python video_style_transfer.py --input videos/tiger.mp4 --model models/rain_princess.pth --output results/tiger_rain_princess.mp4
+```
+
+You can use any pretrained model in the `models/` directory, or train and use your own model which is covered below. 
+
+### Train Your Own Model
+
+To train your own style transfer model, use the train.py script. Example usage:
+
+```bash
+python train.py --content PATH_TO_CONTENT_IMAGE --style PATH_TO_STYLE_IMAGE --output_dir results/
+```
+
+You can customize the training with additional arguments:
+
+```
+usage: train.py [-h] --content CONTENT --style STYLE [--output OUTPUT] [--output_dir OUTPUT_DIR]
+                                [--imsize IMSIZE] [--num_steps NUM_STEPS] [--style_weight STYLE_WEIGHT]
+                                [--content_weight CONTENT_WEIGHT] [--init_random]
+
+Neural Style Transfer
+
+options:
+    -h, --help            show this help message and exit
+    --content CONTENT     Path to the content image
+    --style STYLE         Path to the style image
+    --output OUTPUT       Output file path (e.g., results/output.jpg)
+    --output_dir OUTPUT_DIR
+                                                Base output directory (used if --output not specified)
+    --imsize IMSIZE       Size of output image
+    --num_steps NUM_STEPS
+                                                Number of optimization steps
+    --style_weight STYLE_WEIGHT
+                                                Weight for style loss
+    --content_weight CONTENT_WEIGHT
+                                                Weight for content loss
+    --init_random         Initialize with random noise (default: content image)
+```
+
